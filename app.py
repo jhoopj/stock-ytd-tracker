@@ -96,6 +96,10 @@ df_close = df_close.dropna(axis=1, how="all")
 first_valid_prices = df_close.bfill().iloc[0]
 df_ytd_pct = ((df_close / first_valid_prices) - 1) * 100
 
+# Identify Top 7 Performers
+latest_ytd_returns = df_ytd_pct.iloc[-1].dropna().nlargest(7)
+top_7_tickers = latest_ytd_returns.index.tolist()
+
 # Build Summary Table Data with Portfolio Categories
 summary_rows = []
 
@@ -123,15 +127,31 @@ for category, ticker in active_tickers_with_category:
 # Display Summary Table grouped by category
 if summary_rows:
     st.subheader("Performance Summary")
+    st.info("⭐ Rows highlighted in gold represent the **Top 7 YTD Performers** across all selected portfolios.")
     summary_df = pd.DataFrame(summary_rows)
 
-    def highlight_returns(val):
-        if "(" in str(val) or "%" in str(val):
-            if str(val).startswith("-"):
-                return "color: #ff4b4b; font-weight: bold;"
-            elif str(val).startswith("+"):
-                return "color: #09ab3b; font-weight: bold;"
-        return ""
+    # Row Styling Function: Highlights entire row for Top 7 & formats return colors
+    def style_dataframe_rows(row):
+        styles = [''] * len(row)
+        is_top_7 = row['Ticker'] in top_7_tickers
+
+        for i, (col, val) in enumerate(row.items()):
+            cell_styles = []
+            
+            # Row Background Highlight for Top 7
+            if is_top_7:
+                cell_styles.append("background-color: #fff3cd;")  # Soft gold/yellow highlight
+            
+            # Text Color for Return Columns
+            if col in ["Today's Return", "YTD Return"]:
+                if str(val).startswith("-"):
+                    cell_styles.append("color: #ff4b4b; font-weight: bold;")
+                elif str(val).startswith("+"):
+                    cell_styles.append("color: #09ab3b; font-weight: bold;")
+            
+            styles[i] = " ".join(cell_styles)
+            
+        return styles
 
     # Option to view grouped by title/category or full list
     view_type = st.radio("View Layout:", ["Grouped by Portfolio Title", "Single Combined Table"], horizontal=True)
@@ -142,13 +162,13 @@ if summary_rows:
             if not cat_df.empty:
                 st.markdown(f"### 📂 {cat}")
                 st.dataframe(
-                    cat_df.style.map(highlight_returns, subset=["Today's Return", "YTD Return"]),
+                    cat_df.style.apply(style_dataframe_rows, axis=1),
                     use_container_width=True,
                     hide_index=True
                 )
     else:
         st.dataframe(
-            summary_df.style.map(highlight_returns, subset=["Today's Return", "YTD Return"]),
+            summary_df.style.apply(style_dataframe_rows, axis=1),
             use_container_width=True,
             hide_index=True
         )
@@ -156,10 +176,6 @@ if summary_rows:
 # Plotly Interactive Chart - Top 7 YTD Performers Only
 st.markdown("---")
 st.subheader("Top 7 YTD Percentage Return Performers")
-
-# Determine latest YTD return for each valid stock and select the top 7
-latest_ytd_returns = df_ytd_pct.iloc[-1].dropna().nlargest(7)
-top_7_tickers = latest_ytd_returns.index.tolist()
 
 fig = go.Figure()
 
