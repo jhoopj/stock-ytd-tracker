@@ -6,7 +6,7 @@ import pandas as pd
 # Page setup
 st.set_page_config(page_title="Stock Watchlist - Daily & YTD Tracker", layout="wide", page_icon="📈")
 
-st.title("📈 HOOPES Stock Watchlist - Daily  & YTD Performance")
+st.title("📈 HOOPES Stock Watchlist - YTD & Daily Performance")
 st.write("Track live prices, daily gains/losses, and Year-To-Date (YTD) percent returns.")
 
 # Portfolio Categories Mapping
@@ -153,20 +153,24 @@ if summary_rows:
             hide_index=True
         )
 
-# Plotly Interactive Chart
+# Plotly Interactive Chart - Top 7 YTD Performers Only
 st.markdown("---")
-st.subheader("YTD Percentage Return Comparison")
+st.subheader("Top 7 YTD Percentage Return Performers")
+
+# Determine latest YTD return for each valid stock and select the top 7
+latest_ytd_returns = df_ytd_pct.iloc[-1].dropna().nlargest(7)
+top_7_tickers = latest_ytd_returns.index.tolist()
 
 fig = go.Figure()
 
-for ticker in df_ytd_pct.columns:
+for ticker in top_7_tickers:
     clean_series = df_ytd_pct[ticker].dropna()
     if not clean_series.empty:
         fig.add_trace(go.Scatter(
             x=clean_series.index,
             y=clean_series,
             mode='lines',
-            name=ticker,
+            name=f"{ticker} ({latest_ytd_returns[ticker]:+.1f}%)",
             hovertemplate=f"<b>{ticker}</b><br>Date: %{{x|%b %d, %Y}}<br>YTD Return: %{{y:+.2f}}%<extra></extra>"
         ))
 
