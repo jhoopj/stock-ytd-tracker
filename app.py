@@ -127,10 +127,10 @@ for category, ticker in active_tickers_with_category:
 # Display Summary Table grouped by category
 if summary_rows:
     st.subheader("Performance Summary")
-    st.info("⭐ Rows highlighted in gold represent the **Top 7 YTD Performers** across all selected portfolios.")
+    st.info("⭐ Rows marked with an amber highlight represent the **Top 7 YTD Performers** across all selected portfolios.")
     summary_df = pd.DataFrame(summary_rows)
 
-    # Row Styling Function: Highlights entire row for Top 7 & formats return colors
+    # Styling function: High contrast tint + left accent border for Top 7
     def style_dataframe_rows(row):
         styles = [''] * len(row)
         is_top_7 = row['Ticker'] in top_7_tickers
@@ -138,10 +138,12 @@ if summary_rows:
         for i, (col, val) in enumerate(row.items()):
             cell_styles = []
             
-            # Row Background Highlight for Top 7
+            # High-visibility row highlight with transparent background and left accent bar
             if is_top_7:
-                cell_styles.append("background-color: #fff3cd;")  # Soft gold/yellow highlight
-            
+                cell_styles.append("background-color: rgba(255, 193, 7, 0.15);")  # Translucent amber background
+                if col == "Ticker":
+                    cell_styles.append("border-left: 5px solid #ffc107; font-weight: bold;") # Amber border indicator
+
             # Text Color for Return Columns
             if col in ["Today's Return", "YTD Return"]:
                 if str(val).startswith("-"):
