@@ -6,7 +6,7 @@ import pandas as pd
 # Page setup
 st.set_page_config(page_title="Stock Watchlist - Daily & YTD Tracker", layout="wide", page_icon="📈")
 
-st.title("📈 HOOPES Stock Watchlist - YTD & Daily Performance")
+st.title("📈 HOOPES Stock Watchlist - Daily  & YTD Performance")
 st.write("Track live prices, daily gains/losses, and Year-To-Date (YTD) percent returns.")
 
 # Portfolio Categories Mapping
