@@ -22,7 +22,7 @@ PORTFOLIOS = {
         "NET", "TWLO", "AAPL", "MSFT", "TSLA", "META", "NVDA", "PLTR", "MOD", "AMD", "SNOW", "GOOG"
     ],
     "BEST of US": [
-        "ZETA", "MNTN", "KVYO", "UPSD", "CEG", "IONQ", "TLN", "D", "AEP", "GEV", "FIX", "EME", "PWR",
+        "TOYO", "ZETA", "MNTN", "KVYO", "UPSD", "CEG", "IONQ", "TLN", "D", "AEP", "GEV", "FIX", "EME", "PWR",
         "SBGSY", "ETN", "FN", "AAOI", "LITE", "COHR", "RBRK", "MARA", "CLS", "GLXY", "MU", "CCJ",
         "QXO", "AEHR", "NAGE", "PDYN", "NVTS", "AEE", "RTX", "V", "BBAI", "INOD", "SITM", "SOUN",
         "MRVL", "VRT", "GTLS", "IREN", "SES", "SPG", "CRDO", "SKYT"
