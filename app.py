@@ -1,207 +1,63 @@
-import streamlit as st
-import yfinance as yf
-import plotly.graph_objects as go
 import pandas as pd
+import yfinance as yf
+import streamlit as st
 
-# Page setup
-st.set_page_config(page_title="Stock Watchlist - Daily & YTD Tracker", layout="wide", page_icon="📈")
 
-st.title("📈 HOOPES Stock Watchlist - Daily & YTD Performance")
-st.write("Track live prices, daily gains/losses, and Year-To-Date (YTD) percent returns.")
+def get_stock_data(ticker_symbol):
+  ticker = yf.Ticker(ticker_symbol)
 
-# Portfolio Categories Mapping
-PORTFOLIOS = {
-    "Pharma": ["NBIX", "AXSM", "PHAT"],
-    "Gov ETF": ["NANC", "MAGA", "GOP"],
-    "Manufacturing": ["SPAI", "UMAC", "PG", "KMB", "WELD", "IYJ", "XLI", "VIS", "FIDU"],
-    "China": ["WRD", "PONY", "BIDU", "BYDDF", "JD", "BILI", "KWEB", "FXI", "CQQQ", "NTES", "LI", "MCHI"],
-    "Food": ["FIVE", "TGT", "NGVC", "GIS", "MDLZ", "KHC", "DPZ", "COST", "TSN", "PEP", "WMT", "KO", "MCD"],
-    "Tech": [
-        "CBRS", "SPCX", "LIN", "SOXQ", "AMZN", "LRCX", "KRKNF", "HII", "SLAB", "KLAR", "FIG", "BABA",
-        "TTD", "QBTS", "NFLX", "TSM", "LNVGF", "DELL", "BN", "ASML", "INTC", "SYM", "SMCI", "ARM",
-        "NET", "TWLO", "AAPL", "MSFT", "TSLA", "META", "NVDA", "PLTR", "MOD", "AMD", "SNOW", "GOOG"
-    ],
-    "BEST of US": [
-        "TOYO", "ZETA", "MNTN", "KVYO", "UPSD", "CEG", "IONQ", "TLN", "D", "AEP", "GEV", "FIX", "EME", "PWR",
-        "SBGSY", "ETN", "FN", "AAOI", "LITE", "COHR", "RBRK", "MARA", "CLS", "GLXY", "MU", "CCJ",
-        "QXO", "AEHR", "NAGE", "PDYN", "NVTS", "AEE", "RTX", "V", "BBAI", "INOD", "SITM", "SOUN",
-        "MRVL", "VRT", "GTLS", "IREN", "SES", "SPG", "CRDO", "SKYT"
-    ],
-    "Auto": ["LCID", "RIVN", "GM", "F"],
-    "ETFs": [
-        "SSPC", "EUAD", "XAR", "ITA", "FTRNX", "BRF", "POET", "VTSAX", "VYM", "SCHD", "NOBL", "ARKG",
-        "ARKB", "ARKF", "ARKK", "ARKQ", "ARKW", "ARKO", "TLT", "KSA", "INDA", "INDI", "BRK-A", "BRK-B",
-        "QQQ", "SQQQ", "VOO", "SPY"
-    ],
-    "Uranium": ["MP", "SRUUF", "DNN", "UUUU"],
-    "Energy": ["XLE", "LNG", "OXY", "XOM", "CVX"],
-    "Health": ["CVS", "JNJ", "REGN", "BSX", "ABT", "LLY", "UNH"],
-    "Insurance": ["KNSL", "FNF", "MKL", "MET", "VRTX", "HRTG", "PGR", "FSCPX", "IAK"],
-    "My Watchlist": [
-        "LUNR", "CAT", "POOL", "BLOK", "NMAX", "JEF", "RKLB", "PLD", "NEE", "KMI", "O", "COIN", "FRSH",
-        "SYF", "VSAT", "HIMS", "MELI", "GME", "BA", "LEN", "APLD", "SGML", "BROS", "CELH", "LOW", "HD",
-        "KLIC", "VICI", "DKNG", "AVGE", "ACLS", "CARR", "INTU", "BUR", "DRV", "ALB", "DHR", "TMUS", "CPRT",
-        "AVGO", "ORCL", "ULTA", "BAC", "AMPX", "ENPH", "NLST", "SHW", "TXN", "VZ", "TMC", "LUV", "RSI",
-        "NOW", "EDUC", "PM", "STLJF", "BIP", "ABCL", "LMT", "TSCDY", "ANDE", "SH", "SEF", "QQJG", "CIBR",
-        "ONEQ", "FLNA", "YXI", "CRSP", "CWCO"
-    ],
-    "My First Portfolio": ["KKR", "BLK", "GE", "T", "JBLU", "HMC", "TM"]
-}
+  # Fetch 1 year of daily historical data to cover YTD and 30-day calculations
+  hist = ticker.history(period="1y")
 
-# Sidebar Controls
-st.sidebar.header("Watchlist Controls")
+  if hist.empty:
+    return None
 
-# Category Selector Filter
-selected_portfolios = st.sidebar.multiselect(
-    "Select Portfolios to Display:",
-    options=list(PORTFOLIOS.keys()),
-    default=list(PORTFOLIOS.keys())
-)
+  # Current price and previous close
+  current_price = hist["Close"].iloc[-1]
+  prev_close = hist["Close"].iloc[-2] if len(hist) > 1 else current_price
 
-# Build active tickers based on selected categories
-active_tickers_with_category = []
-for portfolio_name in selected_portfolios:
-    for t in PORTFOLIOS[portfolio_name]:
-        active_tickers_with_category.append((portfolio_name, t))
+  # Daily change (%)
+  daily_change = ((current_price - prev_close) / prev_close) * 100
 
-# Extract unique list for Yahoo Finance download
-unique_tickers = list(dict.fromkeys([t[1] for t in active_tickers_with_category]))
+  # 30-day change (%)
+  # Uses the price from 30 calendar days/sessions ago (or earliest available)
+  price_30d_ago = hist["Close"].iloc[-30] if len(hist) >= 30 else hist["Close"].iloc[0]
+  change_30d = ((current_price - price_30d_ago) / price_30d_ago) * 100
 
-if not unique_tickers:
-    st.warning("Please select at least one portfolio category.")
-    st.stop()
+  # Year-To-Date (YTD) change (%)
+  current_year = pd.Timestamp.now().year
+  ytd_data = hist[hist.index.year == current_year]
 
-# Fetch YTD & Daily Data
-@st.cache_data(ttl=900)
-def get_ytd_data(ticker_list):
-    try:
-        data = yf.download(ticker_list, period="ytd", interval="1d")["Close"]
-        if isinstance(data, pd.Series):
-            data = data.to_frame(name=ticker_list[0])
-        return data
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-        return pd.DataFrame()
+  if not ytd_data.empty:
+    start_of_year_price = ytd_data["Close"].iloc[0]
+    ytd_change = (
+        (current_price - start_of_year_price) / start_of_year_price
+    ) * 100
+  else:
+    ytd_change = 0.0
 
-with st.spinner("Fetching market data..."):
-    df_close = get_ytd_data(unique_tickers)
+  return {
+      "Current Price": current_price,
+      "Daily Change (%)": daily_change,
+      "30-Day Change (%)": change_30d,
+      "YTD Change (%)": ytd_change,
+  }
 
-if df_close.empty:
-    st.error("No data retrieved. Please verify your ticker symbols.")
-    st.stop()
 
-df_close = df_close.dropna(axis=1, how="all")
+# Streamlit UI
+st.title("Stock YTD & Daily Tracker")
 
-# Calculate YTD % Return
-first_valid_prices = df_close.bfill().iloc[0]
-df_ytd_pct = ((df_close / first_valid_prices) - 1) * 100
+ticker_input = st.text_input("Enter Stock Ticker (e.g., AAPL, MSFT):", "AAPL")
 
-# Identify Top 7 Performers
-latest_ytd_returns = df_ytd_pct.iloc[-1].dropna().nlargest(7)
-top_7_tickers = latest_ytd_returns.index.tolist()
+if ticker_input:
+  data = get_stock_data(ticker_input)
 
-# Build Summary Table Data with Portfolio Categories
-summary_rows = []
+  if data:
+    col1, col2, col3, col4 = st.columns(4)
 
-for category, ticker in active_tickers_with_category:
-    if ticker in df_close.columns:
-        price_series = df_close[ticker].dropna()
-        ytd_series = df_ytd_pct[ticker].dropna()
-        
-        if len(price_series) >= 2:
-            latest_price = price_series.iloc[-1]
-            prev_price = price_series.iloc[-2]
-            
-            daily_change_dollar = latest_price - prev_price
-            daily_change_pct = (daily_change_dollar / prev_price) * 100
-            ytd_pct = ytd_series.iloc[-1]
-            
-            summary_rows.append({
-                "Portfolio": category,
-                "Ticker": ticker,
-                "Current Price": f"${latest_price:,.2f}",
-                "Today's Return": f"{daily_change_dollar:+,.2f} ({daily_change_pct:+.2f}%)",
-                "YTD Return": f"{ytd_pct:+.2f}%"
-            })
-
-# Display Summary Table grouped by category
-if summary_rows:
-    st.subheader("Performance Summary")
-    st.info("⭐ Rows marked with an amber highlight represent the **Top 7 YTD Performers** across all selected portfolios.")
-    summary_df = pd.DataFrame(summary_rows)
-
-    # Styling function: High contrast tint + left accent border for Top 7
-    def style_dataframe_rows(row):
-        styles = [''] * len(row)
-        is_top_7 = row['Ticker'] in top_7_tickers
-
-        for i, (col, val) in enumerate(row.items()):
-            cell_styles = []
-            
-            # High-visibility row highlight with transparent background and left accent bar
-            if is_top_7:
-                cell_styles.append("background-color: rgba(255, 193, 7, 0.15);")  # Translucent amber background
-                if col == "Ticker":
-                    cell_styles.append("border-left: 5px solid #ffc107; font-weight: bold;") # Amber border indicator
-
-            # Text Color for Return Columns
-            if col in ["Today's Return", "YTD Return"]:
-                if str(val).startswith("-"):
-                    cell_styles.append("color: #ff4b4b; font-weight: bold;")
-                elif str(val).startswith("+"):
-                    cell_styles.append("color: #09ab3b; font-weight: bold;")
-            
-            styles[i] = " ".join(cell_styles)
-            
-        return styles
-
-    # Option to view grouped by title/category or full list
-    view_type = st.radio("View Layout:", ["Grouped by Portfolio Title", "Single Combined Table"], horizontal=True)
-
-    if view_type == "Grouped by Portfolio Title":
-        for cat in selected_portfolios:
-            cat_df = summary_df[summary_df["Portfolio"] == cat][["Ticker", "Current Price", "Today's Return", "YTD Return"]]
-            if not cat_df.empty:
-                st.markdown(f"### 📂 {cat}")
-                st.dataframe(
-                    cat_df.style.apply(style_dataframe_rows, axis=1),
-                    use_container_width=True,
-                    hide_index=True
-                )
-    else:
-        st.dataframe(
-            summary_df.style.apply(style_dataframe_rows, axis=1),
-            use_container_width=True,
-            hide_index=True
-        )
-
-# Plotly Interactive Chart - Top 7 YTD Performers Only
-st.markdown("---")
-st.subheader("Top 7 YTD Percentage Return Performers")
-
-fig = go.Figure()
-
-for ticker in top_7_tickers:
-    clean_series = df_ytd_pct[ticker].dropna()
-    if not clean_series.empty:
-        fig.add_trace(go.Scatter(
-            x=clean_series.index,
-            y=clean_series,
-            mode='lines',
-            name=f"{ticker} ({latest_ytd_returns[ticker]:+.1f}%)",
-            hovertemplate=f"<b>{ticker}</b><br>Date: %{{x|%b %d, %Y}}<br>YTD Return: %{{y:+.2f}}%<extra></extra>"
-        ))
-
-fig.update_layout(
-    xaxis_title="Date",
-    yaxis_title="YTD Return (%)",
-    yaxis_ticksuffix="%",
-    hovermode="x unified",
-    template="plotly_white",
-    height=500,
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-)
-
-fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.7)
-
-st.plotly_chart(fig, use_container_width=True)
+    col1.metric("Current Price", f"${data['Current Price']:.2f}")
+    col2.metric("Daily Change", f"{data['Daily Change (%)']:.2f}%")
+    col3.metric("30-Day Change", f"{data['30-Day Change (%)']:.2f}%")
+    col4.metric("YTD Change", f"{data['YTD Change (%)']:.2f}%")
+  else:
+    st.error("Invalid ticker symbol or no data available.")
