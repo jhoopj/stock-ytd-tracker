@@ -50,9 +50,9 @@ def get_portfolio_data(ticker_list):
 
 
 # Streamlit UI
-st.title("Stock Watchlist Tracker")
+st.set_page_config(layout="wide")
+st.title("Stock Portfolio & Watchlist Tracker")
 
-# Entire list extracted from watchlist.csv
 DEFAULT_WATCHLIST = (
     "LUNR, CAT, POOL, BLOK, SI=F, NMAX, JEF, RKLB, PLD, NEE, KMI, O, COIN,"
     " FRSH, SYF, VSAT, HIMS, MELI, GME, BA, LEN, FBTC.TO, APLD, SGML, BROS,"
@@ -68,7 +68,7 @@ tickers = []
 
 with tab1:
   user_input = st.text_area(
-      "Ticker Symbols:", DEFAULT_WATCHLIST, height=150
+      "Ticker Symbols:", DEFAULT_WATCHLIST, height=120
   )
   if user_input:
     tickers = [t.strip() for t in user_input.split(",") if t.strip()]
@@ -86,14 +86,30 @@ with tab2:
     ]
     if symbol_col:
       tickers = uploaded_df[symbol_col[0]].dropna().astype(str).tolist()
-    else:
-      st.error("Could not locate 'Symbol' column in the uploaded CSV.")
 
 if tickers:
   with st.spinner(f"Fetching market data for {len(tickers)} symbols..."):
     df = get_portfolio_data(tickers)
 
   if not df.empty:
+    # 1. Summary Metrics Displayed in Columns
+    st.subheader("Portfolio Summary Breakdown")
+    col1, col2, col3, col4 = st.columns(4)
+
+    avg_daily = df["Daily Change (%)"].mean()
+    avg_30d = df["30-Day Change (%)"].mean()
+    avg_ytd = df["YTD Change (%)"].mean()
+    total_tracked = len(df)
+
+    col1.metric("Total Stocks Tracked", total_tracked)
+    col2.metric("Avg Daily Change", f"{avg_daily:+.2f}%")
+    col3.metric("Avg 30-Day Change", f"{avg_30d:+.2f}%")
+    col4.metric("Avg YTD Change", f"{avg_ytd:+.2f}%")
+
+    st.markdown("---")
+
+    # 2. Main Stock Table Breakdown
+    st.subheader("All Tracked Holdings")
     st.dataframe(
         df.style.format({
             "Price ($)": "${:.2f}",
@@ -103,5 +119,28 @@ if tickers:
         }),
         use_container_width=True,
     )
-  else:
-    st.error("No valid market data retrieved for the specified tickers.")
+
+    st.markdown("---")
+
+    # 3. Top Seven Performing Stocks Section
+    st.subheader("Top 7 Performing Stocks (YTD)")
+    top_7_df = df.nlargest(7, "YTD Change (%)").reset_index(drop=True)
+
+    top_cols = st.columns(7)
+    for idx, row in top_7_df.iterrows():
+      with top_cols[idx]:
+        st.metric(
+            label=row["Ticker"],
+            value=f"${row['Price ($)']:.2f}",
+            delta=f"{row['YTD Change (%)']:+.2f}% YTD",
+        )
+
+    st.dataframe(
+        top_7_df.style.format({
+            "Price ($)": "${:.2f}",
+            "Daily Change (%)": "{:+.2f}%",
+            "30-Day Change (%)": "{:+.2f}%",
+            "YTD Change (%)": "{:+.2f}%",
+        }),
+        use_container_width=True,
+    )
