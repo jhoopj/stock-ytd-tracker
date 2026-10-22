@@ -16,7 +16,7 @@ st.write(
     " (YTD) percent gains."
 )
 
-# Portfolio Categories Mapping (Updated with all tickers)
+# Portfolio Categories Mapping
 PORTFOLIOS = {
     "Pharma": ["NBIX", "AXSM", "PHAT"],
     "Gov ETF": ["NANC", "MAGA", "GOP"],
@@ -281,11 +281,11 @@ unique_tickers = list(
 )
 
 if not unique_tickers:
-  st.warning("Pangisipang pumili ti uray maysa a portfolio category.")
+  st.warning("Please select at least one portfolio category.")
   st.stop()
 
 
-# Download Market Data (1 year span to support YTD and 30-Day metrics)
+# Download Market Data
 @st.cache_data(ttl=900)
 def fetch_stock_history(ticker_list):
   try:
@@ -294,15 +294,15 @@ def fetch_stock_history(ticker_list):
       data = data.to_frame(name=ticker_list[0])
     return data
   except Exception as e:
-    st.error(f"Awan pakatignay a data: {e}")
+    st.error(f"Error fetching data: {e}")
     return pd.DataFrame()
 
 
-with st.spinner("Manag-download kadagiti kalkalap a datos ti stock..."):
+with st.spinner("Downloading market data for all tickers..."):
   df_close = fetch_stock_history(unique_tickers)
 
 if df_close.empty:
-  st.error("Awan nabaliwan a datos manipud Yahoo Finance.")
+  st.error("No market data returned from Yahoo Finance.")
   st.stop()
 
 df_close = df_close.dropna(axis=1, how="all")
@@ -343,6 +343,17 @@ for category, ticker in active_tickers_with_category:
 
 summary_df = pd.DataFrame(summary_rows)
 
+
+# Color Formatting Function for Streamlit Tables
+def color_positive_green_negative_red(val):
+  if isinstance(val, (int, float)):
+    if val > 0:
+      return "color: #008000; font-weight: bold;"  # Green
+    elif val < 0:
+      return "color: #FF0000; font-weight: bold;"  # Red
+  return ""
+
+
 if not summary_df.empty:
   # Metric Cards Top Banner
   st.subheader("Performance Summary Breakdown")
@@ -364,34 +375,60 @@ if not summary_df.empty:
       horizontal=True,
   )
 
+  pct_cols = ["Daily Change (%)", "30-Day Change (%)", "YTD Change (%)"]
+
   if view_type == "Grouped by Portfolio Title":
     for cat in selected_portfolios:
       cat_df = summary_df[summary_df["Portfolio"] == cat][
-          ["Ticker", "Current Price", "Daily Change (%)", "30-Day Change (%)", "YTD Change (%)"]
+          [
+              "Ticker",
+              "Current Price",
+              "Daily Change (%)",
+              "30-Day Change (%)",
+              "YTD Change (%)",
+          ]
       ]
       if not cat_df.empty:
         st.markdown(f"### 📂 {cat}")
-        st.dataframe(
+
+        # Apply color styling to percentage change columns
+        styled_cat_df = (
             cat_df.style.format({
                 "Current Price": "${:.2f}",
                 "Daily Change (%)": "{:+.2f}%",
                 "30-Day Change (%)": "{:+.2f}%",
                 "YTD Change (%)": "{:+.2f}%",
-            }),
-            use_container_width=True,
-            hide_index=True,
+            })
+            if hasattr(cat_df.style, "map")
+            else cat_df.style.applymap(
+                color_positive_green_negative_red, subset=pct_cols
+            )
         )
+        if hasattr(cat_df.style, "map"):
+          styled_cat_df = styled_cat_df.map(
+              color_positive_green_negative_red, subset=pct_cols
+          )
+
+        st.dataframe(styled_cat_df, use_container_width=True, hide_index=True)
   else:
-    st.dataframe(
+    styled_summary_df = (
         summary_df.style.format({
             "Current Price": "${:.2f}",
             "Daily Change (%)": "{:+.2f}%",
             "30-Day Change (%)": "{:+.2f}%",
             "YTD Change (%)": "{:+.2f}%",
-        }),
-        use_container_width=True,
-        hide_index=True,
+        })
+        if hasattr(summary_df.style, "map")
+        else summary_df.style.applymap(
+            color_positive_green_negative_red, subset=pct_cols
+        )
     )
+    if hasattr(summary_df.style, "map"):
+      styled_summary_df = styled_summary_df.map(
+          color_positive_green_negative_red, subset=pct_cols
+      )
+
+    st.dataframe(styled_summary_df, use_container_width=True, hide_index=True)
 
   st.markdown("---")
 
