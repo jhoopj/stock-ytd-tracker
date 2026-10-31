@@ -276,6 +276,7 @@ PORTFOLIOS = {
     ],
     "My First Portfolio": ["KKR", "BLK", "GE", "T", "JBLU", "HMC", "TM"],
 }
+
 # Sidebar Controls
 st.sidebar.header("Watchlist Controls")
 selected_portfolios = st.sidebar.multiselect(
@@ -382,6 +383,79 @@ if not summary_df.empty:
 
   st.markdown("---")
 
+  # Helper Function to Build Trajectory Charts
+  def plot_trajectory_chart(tickers, title, days=30):
+    fig = go.Figure()
+    for t in tickers:
+      if t in df_close.columns:
+        s = df_close[t].dropna()
+        s_recent = s.tail(days)
+        if not s_recent.empty:
+          pct_series = ((s_recent / s_recent.iloc[0]) - 1) * 100
+          fig.add_trace(
+              go.Scatter(
+                  x=pct_series.index,
+                  y=pct_series,
+                  mode="lines",
+                  name=t,
+              )
+          )
+    fig.update_layout(
+        title=title,
+        xaxis_title="Date",
+        yaxis_title="Return (%)",
+        template="plotly_white",
+        height=380,
+    )
+    return fig
+
+  # Deduplicated DataFrame for Unique Ticker Performance Rankings
+  unique_perf_df = summary_df.drop_duplicates(subset=["Ticker"])
+
+  # 🚀 TOP 7 BEST 30-DAY PERFORMERS
+  st.subheader("🚀 Top 7 Highest 30-Day Returns")
+  top_30d_df = (
+      unique_perf_df.nlargest(7, "30-Day Change (%)").reset_index(drop=True)
+  )
+
+  top_30_cols = st.columns(min(7, len(top_30d_df)))
+  for idx, row in top_30d_df.iterrows():
+    with top_30_cols[idx]:
+      st.metric(
+          label=row["Ticker"],
+          value=f"${row['Current Price']:.2f}",
+          delta=f"{row['30-Day Change (%)']:+.2f}% 30D",
+      )
+
+  fig_top_30 = plot_trajectory_chart(
+      top_30d_df["Ticker"], "Top 7 Best 30-Day Trajectory", days=30
+  )
+  st.plotly_chart(fig_top_30, use_container_width=True)
+
+  st.markdown("---")
+
+  # 🔻 TOP 7 WORST 30-DAY PERFORMERS
+  st.subheader("🔻 Top 7 Lowest (Worst) 30-Day Returns")
+  bottom_30d_df = (
+      unique_perf_df.nsmallest(7, "30-Day Change (%)").reset_index(drop=True)
+  )
+
+  bot_30_cols = st.columns(min(7, len(bottom_30d_df)))
+  for idx, row in bottom_30d_df.iterrows():
+    with bot_30_cols[idx]:
+      st.metric(
+          label=row["Ticker"],
+          value=f"${row['Current Price']:.2f}",
+          delta=f"{row['30-Day Change (%)']:+.2f}% 30D",
+      )
+
+  fig_bot_30 = plot_trajectory_chart(
+      bottom_30d_df["Ticker"], "Top 7 Lowest 30-Day Trajectory", days=30
+  )
+  st.plotly_chart(fig_bot_30, use_container_width=True)
+
+  st.markdown("---")
+
   # Table Display Options
   view_type = st.radio(
       "View Layout:",
@@ -448,13 +522,11 @@ if not summary_df.empty:
 
   # Top 7 Performing Stocks (YTD) Section
   st.subheader("Top 7 Performing Stocks (YTD)")
-  top_7_df = (
-      summary_df.drop_duplicates(subset=["Ticker"])
-      .nlargest(7, "YTD Change (%)")
-      .reset_index(drop=True)
+  top_7_df = unique_perf_df.nlargest(7, "YTD Change (%)").reset_index(
+      drop=True
   )
 
-  top_cols = st.columns(7)
+  top_cols = st.columns(min(7, len(top_7_df)))
   for idx, row in top_7_df.iterrows():
     with top_cols[idx]:
       st.metric(
@@ -463,8 +535,8 @@ if not summary_df.empty:
           delta=f"{row['YTD Change (%)']:+.2f}% YTD",
       )
 
-  # Plotly Chart for Top 7 Performers
-  fig = go.Figure()
+  # Plotly Chart for Top 7 YTD Performers
+  fig_ytd = go.Figure()
   for t in top_7_df["Ticker"]:
     if t in df_close.columns:
       s = df_close[t].dropna()
@@ -472,7 +544,7 @@ if not summary_df.empty:
       s_ytd = s[s.index.year == current_yr]
       if not s_ytd.empty:
         pct_series = ((s_ytd / s_ytd.iloc[0]) - 1) * 100
-        fig.add_trace(
+        fig_ytd.add_trace(
             go.Scatter(
                 x=pct_series.index,
                 y=pct_series,
@@ -481,11 +553,11 @@ if not summary_df.empty:
             )
         )
 
-  fig.update_layout(
+  fig_ytd.update_layout(
       title="Top 7 YTD Return Trajectory",
       xaxis_title="Date",
       yaxis_title="YTD Return (%)",
       template="plotly_white",
       height=450,
   )
-  st.plotly_chart(fig, use_container_width=True)
+  st.plotly_chart(fig_ytd, use_container_width=True)
