@@ -18,7 +18,7 @@ st.write(
 
 # Portfolio Categories Mapping
 PORTFOLIOS = {
-    "Pharma": ["NBIX", "AXSM", "PHAT"],
+    "Pharma": ["NBIX", "AXSM", "PHAT", "IHE", "PPH"],
     "Gov ETF": ["NANC", "MAGA", "GOP"],
     "Manufacturing": [
         "SPAI",
@@ -97,6 +97,11 @@ PORTFOLIOS = {
         "AMD",
         "SNOW",
         "GOOG",
+        "AIQ",
+        "SMHX",
+        "XSD",
+        "DTCR",
+        "IBOT",
     ],
     "BEST of US": [
         "TOYO",
@@ -176,10 +181,18 @@ PORTFOLIOS = {
         "SQQQ",
         "VOO",
         "SPY",
+        "IGF",
+        "PAVE",
+        "XHS",
+        "KBE",
+        "KRE",
+        "KBWB",
+        "SHLD",
     ],
+    "Clean Energy & Power": ["ICLN", "TAN", "QCLN", "GRID", "NLR"],
     "Uranium": ["MP", "SRUUF", "DNN", "UUUU"],
-    "Energy": ["XLE", "LNG", "OXY", "XOM", "CVX"],
-    "Health": ["CVS", "JNJ", "REGN", "BSX", "ABT", "LLY", "UNH"],
+    "Energy": ["XLE", "LNG", "OXY", "XOM", "CVX", "FCG", "MLPX"],
+    "Health": ["CVS", "JNJ", "REGN", "BSX", "ABT", "LLY", "UNH", "OZEM", "IHF"],
     "Insurance": ["KNSL", "FNF", "MKL", "MET", "VRTX", "HRTG", "PGR", "FSCPX", "IAK"],
     "My Watchlist": [
         "LUNR",
@@ -258,10 +271,11 @@ PORTFOLIOS = {
         "YXI",
         "CRSP",
         "CWCO",
+        "EURMAD=X",
+        "WEBN.DE",
     ],
     "My First Portfolio": ["KKR", "BLK", "GE", "T", "JBLU", "HMC", "TM"],
 }
-
 # Sidebar Controls
 st.sidebar.header("Watchlist Controls")
 selected_portfolios = st.sidebar.multiselect(
